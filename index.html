@@ -17,7 +17,7 @@
       justify-content: center;
       align-items: center;
       height: 100%;
-      background: #00ff00; /* green screen */
+      background: #00ff00;
       cursor: pointer;
     }
 
@@ -46,18 +46,22 @@
   const screen = document.getElementById("screen");
 
   screen.addEventListener("click", () => {
-    // Go fullscreen
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen();
-    }
+    // Try fullscreen
+    document.documentElement.requestFullscreen().catch(() => {});
 
-    // Replace with Rickroll
+    // Load muted autoplay video
     document.body.innerHTML = `
       <iframe 
-        src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0" 
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&controls=0&loop=1&playlist=dQw4w9WgXcQ" 
         allow="autoplay; fullscreen">
       </iframe>
     `;
+
+    // Unmute on any further interaction
+    document.addEventListener("click", () => {
+      const iframe = document.querySelector("iframe");
+      iframe.src = iframe.src.replace("mute=1", "mute=0");
+    });
   });
 </script>
 
