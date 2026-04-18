@@ -1,68 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Free Cookie</title>
+  <title>Carrot File Opener</title>
+
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
+      background: orange;
+      color: white;
+      text-align: center;
     }
 
-    #screen {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100%;
-      background: #00ff00;
+    #fileList {
+      max-height: 200px;
+      overflow: auto;
+      border: 2px solid #ff8800;
+      margin: 20px;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .file {
+      padding: 6px;
       cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,0.3);
     }
 
-    h1 {
-      font-size: 50px;
-      color: black;
-      background: white;
-      padding: 20px 40px;
-      border-radius: 15px;
+    .file:hover {
+      background: rgba(0,0,0,0.2);
     }
 
-    iframe {
+    #viewer {
+      margin-top: 20px;
+    }
+
+    img, iframe {
+      max-width: 90%;
+      max-height: 70vh;
+    }
+
+    /* 🔥 FULLSCREEN MODE */
+    .fullscreen #fileList,
+    .fullscreen h2,
+    .fullscreen input {
+      display: none;
+    }
+
+    .fullscreen #viewer {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      border: none;
+      background: orange;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fullscreen img,
+    .fullscreen iframe {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
     }
   </style>
 </head>
 <body>
 
-<div id="screen">
-  <h1>Click for cookie 🍪</h1>
-</div>
+<h2>🥕 Carrot File Opener</h2>
+<input type="file" id="fileInput">
+
+<div id="fileList"></div>
+<div id="viewer"><p>Select a file</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
-  const screen = document.getElementById("screen");
+const input = document.getElementById("fileInput");
+const fileList = document.getElementById("fileList");
+const viewer = document.getElementById("viewer");
 
-  screen.addEventListener("click", () => {
-    // Try fullscreen
-    document.documentElement.requestFullscreen().catch(() => {});
+input.addEventListener("change", async () => {
+  const file = input.files[0];
+  if (!file) return;
 
-    // Load muted autoplay video
-    document.body.innerHTML = `
-      <iframe 
-        src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&controls=0&loop=1&playlist=dQw4w9WgXcQ" 
-        allow="autoplay; fullscreen">
-      </iframe>
-    `;
+  fileList.innerHTML = "";
+  viewer.innerHTML = "Loading...";
 
-    // Unmute on any further interaction
-    document.addEventListener("click", () => {
-      const iframe = document.querySelector("iframe");
-      iframe.src = iframe.src.replace("mute=1", "mute=0");
+  const name = file.name.toLowerCase();
+
+  if (name.endsWith(".zip")) {
+    const zip = await JSZip.loadAsync(file);
+
+    viewer.innerHTML = "<p>Click a file below</p>";
+
+    Object.keys(zip.files).forEach(n => {
+      if (zip.files[n].dir) return;
+
+      const div = document.createElement("div");
+      div.className = "file";
+      div.textContent = n;
+
+      div.onclick = async () => openFile(zip.files[n], n);
+
+      fileList.appendChild(div);
     });
-  });
+  } else {
+    openDirectFile(file);
+  }
+});
+
+async function openFile(fileObj, name) {
+  const lower = name.toLowerCase();
+  viewer.innerHTML = "Loading...";
+
+  document.body.classList.add("fullscreen");
+
+  if (lower.match(/\.(png|jpg|jpeg|gif|webp)$/)) {
+    const blob = await fileObj.async("blob");
+    showImage(blob);
+  }
+  else if (lower.endsWith(".html")) {
+    const text = await fileObj.async("string");
+    viewer.innerHTML = `<iframe srcdoc="${text.replace(/"/g,'&quot;')}"></iframe>`;
+  }
+  else {
+    viewer.innerHTML = "<p>Can't preview</p>";
+  }
+}
+
+function openDirectFile(file) {
+  const name = file.name.toLowerCase();
+
+  document.body.classList.add("fullscreen");
+
+  if (name.match(/\.(png|jpg|jpeg|gif|webp)$/)) {
+    showImage(file);
+  }
+  else if (name.endsWith(".html")) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      viewer.innerHTML = `<iframe srcdoc="${e.target.result.replace(/"/g,'&quot;')}"></iframe>`;
+    };
+    reader.readAsText(file);
+  }
+  else {
+    viewer.innerHTML = "<p>Unsupported file</p>";
+  }
+}
+
+function showImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    viewer.innerHTML = `<img src="${e.target.result}">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ⌨️ ESC to exit fullscreen
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.body.classList.remove("fullscreen");
+    viewer.innerHTML = "<p>Select a file</p>";
+  }
+});
 </script>
 
 </body>
